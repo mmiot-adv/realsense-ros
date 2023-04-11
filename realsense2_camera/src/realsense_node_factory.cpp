@@ -475,7 +475,7 @@ BootResetWatchdog::BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& priva
 		{
 			ROS_INFO("Color is enabled, checking for color/image_raw");
 			_flg_color_message_arrived = false;
-			_sub_color = _privateNh.subscribe("color/image_raw", 1, &BootResetWatchdog::_cb_color, this);
+			_sub_color = _nh.subscribe("color/image_raw", 1, &BootResetWatchdog::_cb_color, this);
 		} else {
 			ROS_INFO("Color is disabled, not checking");
 			_flg_color_message_arrived = true;
@@ -488,7 +488,7 @@ BootResetWatchdog::BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& priva
 		{
 			ROS_INFO("Depth is enabled, checking for depth/color/points");
 			_flg_depth_message_arrived = false;
-			_privateNh.subscribe("depth/color/points", 1, &BootResetWatchdog::_cb_depth, this);
+			_sub_depth = _nh.subscribe("depth/color/points", 1, &BootResetWatchdog::_cb_depth, this);
 		} else {
 			ROS_INFO("Depth is disabled, not checking");
 			_flg_depth_message_arrived = true;
@@ -501,7 +501,7 @@ BootResetWatchdog::BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& priva
 		{
 			ROS_INFO("Imu is enabled, checking for imu");
 			_flg_imu_message_arrived = false;
-			_privateNh.subscribe("imu", 1, &BootResetWatchdog::_cb_imu, this);
+			_sub_imu = _nh.subscribe("imu", 1, &BootResetWatchdog::_cb_imu, this);
 		} else {
 			ROS_INFO("Imu is disabled, not checking");
 			_flg_imu_message_arrived = true;
