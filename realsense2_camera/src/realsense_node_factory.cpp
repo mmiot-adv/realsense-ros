@@ -494,9 +494,11 @@ BootResetWatchdog::BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& priva
 		}
 	}
 	{
-		bool _enable_imu = false;
-		_privateNh.getParam("enable_imu", _enable_imu);
-		if (_enable_imu)
+		bool _enable_gyro = false;
+		_privateNh.getParam("enable_gyro", _enable_gyro);
+		bool _enable_accel = false;
+		_privateNh.getParam("enable_accel", _enable_accel);
+		if (_enable_gyro || _enable_accel)
 		{
 			ROS_INFO("Imu is enabled, checking for imu");
 			_flg_imu_message_arrived = false;
