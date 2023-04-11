@@ -125,5 +125,6 @@ namespace realsense2_camera
         ros::ServiceServer toggle_sensor_srv;
         ros::WallTimer _init_timer;
         ros::ServiceServer _reset_srv;
+
     };
 }//end namespace
