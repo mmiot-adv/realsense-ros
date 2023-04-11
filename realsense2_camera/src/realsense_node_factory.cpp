@@ -508,6 +508,7 @@ BootResetWatchdog::BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& priva
 			_flg_imu_message_arrived = true;
 		}
 	}
+	// start watchdog thread
 	_watchdog_thread = std::make_shared<std::thread>(&BootResetWatchdog::_watchdog, this);
 }
 
