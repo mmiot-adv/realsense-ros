@@ -552,5 +552,13 @@ void BootResetWatchdog::_watchdog(){
 			_reset_cb();
 			return;
 		}
+		else {
+			ROS_INFO_STREAM_THROTTLE(
+				1,
+				"Watchdog waiting for messages: color=" << _flg_color_message_arrived
+				<< ", depth=" << _flg_depth_message_arrived <<
+				", imu=" << _flg_imu_message_arrived
+			);
+		}
 	}
 }
