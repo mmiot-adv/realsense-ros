@@ -20,7 +20,11 @@
 #include <csignal>
 #include <eigen3/Eigen/Geometry>
 #include <fstream>
+#include <memory>
 #include <thread>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <std_srvs/Empty.h>
 
 namespace realsense2_camera
@@ -54,6 +58,41 @@ namespace realsense2_camera
         virtual ~InterfaceRealSenseNode() = default;
     };
 
+    /**
+     * @brief A watchdog to reset the device if it is not publishing any data for a given timeout.
+     */
+    class BootResetWatchdog{
+        public:
+            BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& private_nh, std::function<void()> reset_cb, ros::Duration timeout = {10, 0});
+            ~BootResetWatchdog();
+        private:
+            ros::NodeHandle _nh;
+            ros::NodeHandle _privateNh;
+
+            std::function<void()> _reset_cb;
+            std::shared_ptr<std::thread> _watchdog_thread;
+
+            ros::Time _start_time;
+            ros::Duration _timeout;
+
+            // flags to indicate if a message has arrived
+            bool _flg_color_message_arrived;
+            bool _flg_depth_message_arrived;
+            bool _flg_imu_message_arrived;
+
+            // callbacks for each message
+            void _cb_color(sensor_msgs::ImageConstPtr msg);
+            void _cb_depth(sensor_msgs::PointCloud2ConstPtr msg);
+            void _cb_imu(sensor_msgs::ImuConstPtr msg);
+
+            // subscribers for each message
+            ros::Subscriber _sub_color;
+            ros::Subscriber _sub_depth;
+            ros::Subscriber _sub_imu;
+
+            void _watchdog();
+    };
+
     class RealSenseNodeFactory : public nodelet::Nodelet
     {
     public:
@@ -75,6 +114,7 @@ namespace realsense2_camera
 
         rs2::device _device;
         std::shared_ptr<InterfaceRealSenseNode> _realSenseNode;
+        std::shared_ptr<BootResetWatchdog> _boot_reset_watchdog;
         rs2::context _ctx;
         std::string _serial_no;
         std::string _usb_port_id;
@@ -85,6 +125,5 @@ namespace realsense2_camera
         ros::ServiceServer toggle_sensor_srv;
         ros::WallTimer _init_timer;
         ros::ServiceServer _reset_srv;
-
     };
 }//end namespace
