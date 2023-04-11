@@ -352,6 +352,14 @@ void RealSenseNodeFactory::StartDevice()
 	{
 		ros::NodeHandle nh = getNodeHandle();
 		ros::NodeHandle privateNh = getPrivateNodeHandle();
+		{
+			// start reset watchdog in case of boot failure
+			double boot_failure_timeout = 10.0;
+			privateNh.getParam("boot_failure_timeout", boot_failure_timeout);
+			if (boot_failure_timeout > 0){
+				_boot_reset_watchdog = std::make_shared<BootResetWatchdog>(nh, privateNh, std::bind(&RealSenseNodeFactory::reset, this), ros::Duration(boot_failure_timeout));
+			}
+		}
 		// TODO
 		std::string pid_str(_device.get_info(RS2_CAMERA_INFO_PRODUCT_ID));
 		uint16_t pid = std::stoi(pid_str, 0, 16);
@@ -389,15 +397,6 @@ void RealSenseNodeFactory::StartDevice()
 		}
 		assert(_realSenseNode);
 		_realSenseNode->publishTopics();
-
-		{
-			// start reset watchdog in case of boot failure
-			double boot_failure_timeout = 10.0;
-			privateNh.getParam("boot_failure_timeout", boot_failure_timeout);
-			if (boot_failure_timeout > 0){
-				_boot_reset_watchdog = std::make_shared<BootResetWatchdog>(nh, privateNh, std::bind(&RealSenseNodeFactory::reset, this), ros::Duration(boot_failure_timeout));
-			}
-		}
 	}
 	catch (const rs2::error& e)
 	{
