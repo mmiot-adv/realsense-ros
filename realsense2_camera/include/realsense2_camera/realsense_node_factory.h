@@ -63,7 +63,7 @@ namespace realsense2_camera
      */
     class BootResetWatchdog{
         public:
-            BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& private_nh, std::function<void()> reset_cb, ros::Duration timeout = {10, 0});
+            BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& private_nh, std::function<void()> reset_cb, ros::Duration timeout = {15, 0});
             ~BootResetWatchdog();
         private:
             ros::NodeHandle _nh;

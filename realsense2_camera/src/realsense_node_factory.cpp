@@ -355,7 +355,7 @@ void RealSenseNodeFactory::StartDevice()
 		ros::NodeHandle privateNh = getPrivateNodeHandle();
 		{
 			// start reset watchdog in case of boot failure
-			double boot_failure_timeout = 10.0;
+			double boot_failure_timeout = 15.0;
 			privateNh.getParam("boot_failure_timeout", boot_failure_timeout);
 			if (boot_failure_timeout > 0){
 				_boot_reset_watchdog = std::make_shared<BootResetWatchdog>(nh, privateNh, std::bind(&RealSenseNodeFactory::reset, this), ros::Duration(boot_failure_timeout));
