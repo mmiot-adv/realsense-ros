@@ -557,9 +557,9 @@ void BootResetWatchdog::_watchdog(){
 			ROS_INFO_STREAM_THROTTLE(
 				1,
 				"Watchdog waiting for messages: color=" << _flg_color_message_arrived
-				<< ", depth=" << _flg_depth_message_arrived <<
-				", imu=" << _flg_imu_message_arrived <<
-				", time since start=" << boost::format(".3f") % (ros::Time::now() - _start_time).toSec()
+				<< ", depth=" << _flg_depth_message_arrived
+				<< ", imu=" << _flg_imu_message_arrived
+				<< ", time since start=" << boost::format(".3f") % (ros::Time::now() - _start_time).toSec()
 			);
 		}
 	}
