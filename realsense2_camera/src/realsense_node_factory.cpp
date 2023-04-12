@@ -6,11 +6,13 @@
 #include "realsense2_camera/t265_realsense_node.h"
 #include <iostream>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <condition_variable>
 #include <signal.h>
 #include <thread>
 #include <regex>
+#include <boost/format.hpp>
 
 using namespace realsense2_camera;
 
@@ -351,6 +353,14 @@ void RealSenseNodeFactory::StartDevice()
 	{
 		ros::NodeHandle nh = getNodeHandle();
 		ros::NodeHandle privateNh = getPrivateNodeHandle();
+		{
+			// start reset watchdog in case of boot failure
+			double boot_failure_timeout = 15.0;
+			privateNh.getParam("boot_failure_timeout", boot_failure_timeout);
+			if (boot_failure_timeout > 0){
+				_boot_reset_watchdog = std::make_shared<BootResetWatchdog>(nh, privateNh, std::bind(&RealSenseNodeFactory::reset, this), ros::Duration(boot_failure_timeout));
+			}
+		}
 		// TODO
 		std::string pid_str(_device.get_info(RS2_CAMERA_INFO_PRODUCT_ID));
 		uint16_t pid = std::stoi(pid_str, 0, 16);
@@ -445,6 +455,112 @@ void RealSenseNodeFactory::tryGetLogSeverity(rs2_log_severity& severity) const
 				severity = (rs2_log_severity)i;
 				break;
 			}
+		}
+	}
+}
+
+BootResetWatchdog::BootResetWatchdog(ros::NodeHandle& nh, ros::NodeHandle& privateNh, std::function<void()> reset_cb, ros::Duration timeout):
+	_nh(nh),
+	_privateNh(privateNh),
+	_reset_cb(reset_cb),
+	_start_time(ros::Time::now()),
+	_timeout(timeout)
+{
+
+	// check for messages
+	{
+		bool _enable_color = false;
+		_privateNh.getParam("enable_color", _enable_color);
+		if (_enable_color)
+		{
+			ROS_INFO("Color is enabled, checking for color/image_raw");
+			_flg_color_message_arrived = false;
+			_sub_color = _nh.subscribe("color/image_raw", 1, &BootResetWatchdog::_cb_color, this);
+		} else {
+			ROS_INFO("Color is disabled, not checking");
+			_flg_color_message_arrived = true;
+		}
+	}
+	{
+		bool _enable_depth = false;
+		_privateNh.getParam("enable_depth", _enable_depth);
+		if (_enable_depth)
+		{
+			ROS_INFO("Depth is enabled, checking for depth/color/points");
+			_flg_depth_message_arrived = false;
+			_sub_depth = _nh.subscribe("depth/color/points", 1, &BootResetWatchdog::_cb_depth, this);
+		} else {
+			ROS_INFO("Depth is disabled, not checking");
+			_flg_depth_message_arrived = true;
+		}
+	}
+	{
+		bool _enable_gyro = false;
+		_privateNh.getParam("enable_gyro", _enable_gyro);
+		bool _enable_accel = false;
+		_privateNh.getParam("enable_accel", _enable_accel);
+		if (_enable_gyro || _enable_accel)
+		{
+			ROS_INFO("Imu is enabled, checking for imu");
+			_flg_imu_message_arrived = false;
+			_sub_imu = _nh.subscribe("imu", 1, &BootResetWatchdog::_cb_imu, this);
+		} else {
+			ROS_INFO("Imu is disabled, not checking");
+			_flg_imu_message_arrived = true;
+		}
+	}
+	// start watchdog thread
+	_watchdog_thread = std::make_shared<std::thread>(&BootResetWatchdog::_watchdog, this);
+}
+
+void BootResetWatchdog::_cb_color(const sensor_msgs::ImageConstPtr msg)
+{
+	_flg_color_message_arrived = true;
+	_sub_color.shutdown();
+}
+
+void BootResetWatchdog::_cb_depth(const sensor_msgs::PointCloud2ConstPtr msg)
+{
+	_flg_depth_message_arrived = true;
+	_sub_depth.shutdown();
+}
+
+void BootResetWatchdog::_cb_imu(const sensor_msgs::ImuConstPtr msg)
+{
+	_flg_imu_message_arrived = true;
+	_sub_imu.shutdown();
+}
+
+BootResetWatchdog::~BootResetWatchdog()
+{
+	if (_watchdog_thread && _watchdog_thread->joinable()){
+		_watchdog_thread->join();
+	}
+}
+
+void BootResetWatchdog::_watchdog(){
+	while (ros::ok())
+	{
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+		if (_flg_color_message_arrived && _flg_depth_message_arrived && _flg_imu_message_arrived)
+		{
+			ROS_INFO("All messages arrived, watchdog is not needed anymore");
+			return;
+		}
+		else if ((ros::Time::now() - _start_time) > _timeout)
+		{
+			ROS_WARN("Timeout reached, resetting");
+			_reset_cb();
+			return;
+		}
+		else {
+			ROS_INFO_STREAM_THROTTLE(
+				1,
+				"Watchdog waiting for messages: color=" << _flg_color_message_arrived
+				<< ", depth=" << _flg_depth_message_arrived
+				<< ", imu=" << _flg_imu_message_arrived
+				<< ", time since start=" << boost::format("%1$.3f") % (ros::Time::now() - _start_time).toSec()
+			);
 		}
 	}
 }
