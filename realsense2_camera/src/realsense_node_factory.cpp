@@ -557,7 +557,8 @@ void BootResetWatchdog::_watchdog(){
 				1,
 				"Watchdog waiting for messages: color=" << _flg_color_message_arrived
 				<< ", depth=" << _flg_depth_message_arrived <<
-				", imu=" << _flg_imu_message_arrived
+				", imu=" << _flg_imu_message_arrived <<
+				", time since start=" << (ros::Time::now() - _start_time).toSec()
 			);
 		}
 	}
